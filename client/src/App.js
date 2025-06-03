@@ -12,7 +12,7 @@ import Register from './pages/Register';
 import Subscriptions from './pages/Subscriptions';
 import Dashboard from './pages/Dashboard';
 import Cart from './pages/Cart';
-
+import Contact from './pages/Contact'; 
 function App() {
   return (
     <GoogleAuthProvider>
@@ -27,6 +27,7 @@ function App() {
               <Route path="/subscriptions" element={<Subscriptions />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/cart" element={<Cart />} />
+              <Route path="/contact" element={<Contact />} />
             </Routes>
           </Layout>
         </Router>
