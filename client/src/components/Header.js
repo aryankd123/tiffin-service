@@ -69,6 +69,8 @@ function Header() {
                 <NavDropdown.Item onClick={handleLogout}>
                   Logout
                 </NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item as={Link} to="/orders">My Orders</NavDropdown.Item>
               </NavDropdown>
             ) : (
               <>

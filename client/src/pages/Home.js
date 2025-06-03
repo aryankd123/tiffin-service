@@ -1,8 +1,10 @@
 import React from 'react';
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 function Home() {
+  const navigate = useNavigate();
+
   return (
     <div>
       {/* Hero Section */}
@@ -120,7 +122,13 @@ function Home() {
                     <strong>₹60/day</strong><br/>
                     Dal + Sabzi + 4 Roti + Rice + Pickle
                   </Card.Text>
-                  <Button variant="success" size="sm">Order Now</Button>
+                  <Button 
+                    variant="success" 
+                    size="sm"
+                    onClick={() => navigate('/subscriptions')}
+                  >
+                    Order Now
+                  </Button>
                 </Card.Body>
               </Card>
             </Col>
@@ -134,7 +142,13 @@ function Home() {
                     <strong>₹90/day</strong><br/>
                     Chicken/Fish Curry + Dal + 4 Roti + Rice
                   </Card.Text>
-                  <Button variant="danger" size="sm">Order Now</Button>
+                  <Button 
+                    variant="danger" 
+                    size="sm"
+                    onClick={() => navigate('/subscriptions')}
+                  >
+                    Order Now
+                  </Button>
                 </Card.Body>
               </Card>
             </Col>
@@ -148,7 +162,13 @@ function Home() {
                     <strong>₹70/day</strong><br/>
                     No Onion/Garlic + Pure Veg + Traditional Recipes
                   </Card.Text>
-                  <Button variant="warning" size="sm">Order Now</Button>
+                  <Button 
+                    variant="warning" 
+                    size="sm"
+                    onClick={() => navigate('/subscriptions')}
+                  >
+                    Order Now
+                  </Button>
                 </Card.Body>
               </Card>
             </Col>
