@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# VS Code
+.vscode/
+
+# Build output
+/build
+/dist
+
+# Sensitive files
+client/src/secret-google-auth.js
+client/src/config.js
+client/.env
+server/.env
+
+.env
+client/.env
+server/.env
+client/src/components/GoogleOAuthProvider.js
+.DS_Store
