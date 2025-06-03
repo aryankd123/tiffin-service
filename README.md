@@ -29,38 +29,95 @@ Built with React, Node.js, Express, and PostgreSQL.
 
 ## 📸 Screenshots
 
-### Home Page
-![Home](assets/Home.png)
+<p align="center">
+  <img src="assets/Home.png" width="400"/>
+  <img src="assets/Home2.png" width="400"/>
+  <img src="assets/Menu.png" width="400"/>
+  <img src="assets/Cart.png" width="400"/>
+  <img src="assets/Signup.png" width="400"/>
+  <img src="assets/Login.png" width="400"/>
+  <img src="assets/Orders_placed.png" width="400"/>
+  <img src="assets/Order_placed.png" width="400"/>
+  <img src="assets/Subscription.png" width="400"/>
+  <img src="assets/Subscription_added.png" width="400"/>
+</p>
 
-### Home2(footer) Page
-![Home](assets/Home2.png)
-
-### Menu Page
-![Menu](assets/Menu.png)
-
-### Cart Page
-![Cart](assets/Cart.png)
-
-### Signup Page
-![Signup](assets/Signup.png)
-
-### Login Page
-![Login](assets/Login.png)
-
-### Orders Page
-![Orders](assets/Orders_placed.png)
-
-### Order_placed 
-![Orders](assets/Order_placed.png)
-
-### Subscription Page
-![Subscription](assets/Subscription.png)
-
-### Subscription_added 
-![Subscription](assets/Subscription_added.png)
 
 ## 🏁 Getting Started
 
 ### 1. Clone the repository
+git clone https://github.com/aryankd123/tiffin-service.git
+cd tiffin-service
+
+### 2. Setup the backend
+cd server
+npm install
+
+Configure your .env file with DB credentials and JWT secret
+PORT=3001 node app.js
+
+
+### 3. Setup the frontend
+cd ../client
+npm install
+
+Configure your .env file with your Google OAuth Client ID
+npm start
+
+
+### 4. Visit in your browser
+
+- Frontend: http://localhost:3000
+- Backend:  http://localhost:3001
+
+---
+
+## ⚙️ Environment Variables
+
+**Client (`client/.env`):**
+REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+
+**Server (`server/.env`):**
+DATABASE_URL=postgresql://user:password@localhost:5432/your_db
+JWT_SECRET=your_jwt_secret
+
+
+---
+
+## 📄 Folder Structure
+tiffin-service/
+├── client/ # React frontend
+├── server/ # Node.js/Express backend
+├── README.md
+├── .gitignore
+└── ...
+
+
+---
+
+## 📝 License
+
+MIT
+
+---
+
+## 👤 Author
+
+Aryan
+
+---
+
+## 💡 Future Plans
+
+- Payment integration (Razorpay/Stripe)
+- Admin dashboard
+- Real-time order tracking
+
+---
+
+[View on GitHub](https://github.com/aryankd123/tiffin-service)
+
+
+
 
 
