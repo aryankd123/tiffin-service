@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
+import Orders from './pages/Orders';
 import GoogleAuthProvider from './components/GoogleOAuthProvider';
 import { CartProvider } from './context/CartContext';
 import Layout from './components/Layout';
@@ -28,6 +28,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/orders" element={<Orders />} />
             </Routes>
           </Layout>
         </Router>

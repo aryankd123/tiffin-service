@@ -1,7 +1,8 @@
 import React from 'react';
-import { Container, Row, Col, Card, Button, Badge, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import axios from 'axios';
 
 function Cart() {
   const { cartItems, addToCart, removeFromCart, clearCart, getCartTotal } = useCart();
@@ -23,6 +24,33 @@ function Cart() {
       </Container>
     );
   }
+
+  // Place Order Handler
+  const handlePlaceOrder = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please log in to place an order.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        'http://localhost:3001/api/orders',
+        {
+          items: cartItems,
+          total: getCartTotal() + 20 + getCartTotal() * 0.05, // subtotal + delivery + GST
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert('Order placed successfully!');
+      clearCart();
+      navigate('/orders');
+    } catch (error) {
+      alert('Failed to place order.');
+      console.error(error);
+    }
+  };
 
   return (
     <Container className="py-5">
@@ -119,8 +147,8 @@ function Cart() {
               </div>
               
               <div className="d-grid gap-2">
-                <Button variant="success" size="lg">
-                  Proceed to Checkout
+                <Button variant="success" size="lg" onClick={handlePlaceOrder}>
+                  Place Order
                 </Button>
                 <Button variant="outline-primary" onClick={() => navigate('/menu')}>
                   Continue Shopping
@@ -135,4 +163,3 @@ function Cart() {
 }
 
 export default Cart;
-
