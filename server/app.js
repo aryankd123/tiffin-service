@@ -8,7 +8,7 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:3000',                    // React development server
-    'https://your-frontend-name.onrender.com'  // Production frontend (you'll update this later)
+    'https://tiffin-service-frontend-iqp6.onrender.com'  // Production frontend (you'll update this later)
   ],
   credentials: true,  // Allow cookies/auth headers
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
