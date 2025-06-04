@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Table, Badge, Spinner, Alert, Button } from 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 function Orders() {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ function Orders() {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3001/api/orders/my-orders', {
+      const response = await axios.get(`${API_BASE_URL}/api/orders/my-orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrders(response.data.data || response.data);

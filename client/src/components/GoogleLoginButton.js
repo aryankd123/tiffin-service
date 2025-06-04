@@ -3,6 +3,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 function GoogleLoginButton() {
   const navigate = useNavigate();
@@ -10,9 +11,10 @@ function GoogleLoginButton() {
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
       // Send the Google token to your backend
-      const response = await axios.post('http://localhost:3001/api/auth/google', {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/google`, {
         token: credentialResponse.credential
       });
+    
 
       // Store the JWT token
       localStorage.setItem('token', response.data.token);

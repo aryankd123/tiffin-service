@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -24,7 +25,7 @@ function Login() {
     setSuccess('');
 
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/login', formData);
+      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, formData);
       
       // Use the context login function instead of directly setting localStorage
       login(response.data.user, response.data.token);

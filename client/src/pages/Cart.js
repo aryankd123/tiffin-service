@@ -3,7 +3,7 @@ import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import axios from 'axios';
-
+import API_BASE_URL from '../config/api';
 function Cart() {
   const { cartItems, addToCart, removeFromCart, clearCart, getCartTotal } = useCart();
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ function Cart() {
 
     try {
       const response = await axios.post(
-        'http://localhost:3001/api/orders',
+        `${API_BASE_URL}/api/orders`,   // here changed for deployment
         {
           items: cartItems,
           total: getCartTotal() + 20 + getCartTotal() * 0.05, // subtotal + delivery + GST

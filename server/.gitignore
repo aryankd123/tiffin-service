@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.production
+.env.development
+.env.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+
+# Database
+*.sqlite
+*.db
+
+# Uploads (if you have file uploads)
+uploads/

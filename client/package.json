@@ -1,7 +1,8 @@
 {
-  "name": "client",
+  "name": "tiffin-service-frontend",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@react-oauth/google": "^0.12.2",
     "@testing-library/dom": "^10.4.0",
@@ -15,13 +16,15 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.1",
     "react-scripts": "^5.0.1",
+    "serve": "^14.2.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "serve": "serve -s build -p 3000 --single"
   },
   "eslintConfig": {
     "extends": [
@@ -43,5 +46,19 @@
   },
   "devDependencies": {
     "chokidar": "^4.0.3"
-  }
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "react",
+    "tiffin",
+    "food-delivery",
+    "frontend",
+    "bootstrap"
+  ],
+  "author": "Aryan",
+  "license": "MIT",
+  "description": "Frontend React application for TiffinExpress - A food delivery and subscription service"
 }

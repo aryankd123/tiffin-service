@@ -5,7 +5,17 @@ require('dotenv').config();
 const app = express();
 
 // Middleware (put body parsing FIRST)
-app.use(cors());
+
+app.use(cors({
+  origin: [
+    'http://localhost:3000',                    // React development server
+    'https://your-frontend-name.onrender.com'  // Production frontend (you'll update this later)
+  ],
+  credentials: true,  // Allow cookies/auth headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
+import API_BASE_URL from '../config/api';
 
 function Contact() {
   return (

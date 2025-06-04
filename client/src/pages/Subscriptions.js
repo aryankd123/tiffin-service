@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Spinner, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom'; // Add this import
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 function Subscriptions() {
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
@@ -17,7 +18,7 @@ function Subscriptions() {
   const fetchSubscriptionPlans = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:3001/api/subscriptions/plans');
+      const response = await axios.get(`${API_BASE_URL}/api/subscriptions/plans`);
       setSubscriptionPlans(response.data.data);
       setError(null);
     } catch (err) {
@@ -58,7 +59,7 @@ function Subscriptions() {
         delivery_address: "Default Address - Please update in dashboard"
       };
 
-      const response = await axios.post('http://localhost:3001/api/subscriptions', subscriptionData, {
+      const response = await axios.post(`${API_BASE_URL}/api/subscriptions`, subscriptionData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

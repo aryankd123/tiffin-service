@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Badge, Button, Spinner, Alert, Toast, ToastC
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 function Menu() {
   const [menuItems, setMenuItems] = useState([]);
@@ -22,7 +23,7 @@ function Menu() {
   const fetchMenuItems = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:3001/api/menu');
+      const response = await axios.get(`${API_BASE_URL}/api/menu`);
       setMenuItems(response.data.data);
       setError(null);
     } catch (err) {

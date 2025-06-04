@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Badge, Alert, Tabs, Tab, Modal, Table } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // Use AuthContext instead of localStorage
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 function Dashboard() {
-  const { user, logout } = useAuth(); // Use AuthContext
+  const { user, logout } = useAuth();
   const [userSubscriptions, setUserSubscriptions] = useState([]);
-  const [userOrders, setUserOrders] = useState([]); // Add orders state
+  const [userOrders, setUserOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
@@ -22,7 +23,7 @@ function Dashboard() {
     const token = localStorage.getItem('token');
     try {
       await axios.patch(
-        `http://localhost:3001/api/subscriptions/${subscription.id}/status`,
+        `${API_BASE_URL}/api/subscriptions/${subscription.id}/status`,
         { status: 'paused' },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -35,40 +36,38 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    // Check if user is logged in using AuthContext
     if (!user) {
       navigate('/login');
       return;
     }
     
     fetchUserSubscriptions();
-    fetchUserOrders(); // Fetch orders too
+    fetchUserOrders();
   }, [user, navigate]);
 
   const fetchUserSubscriptions = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Fetching subscriptions with token:', token); // Debug log
+      console.log('Fetching subscriptions with token:', token);
       
-      const response = await axios.get('http://localhost:3001/api/subscriptions/my-subscriptions', {
+      const response = await axios.get(`${API_BASE_URL}/api/subscriptions/my-subscriptions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('Subscriptions response:', response.data); // Debug log
+      console.log('Subscriptions response:', response.data);
       setUserSubscriptions(response.data.data || response.data);
     } catch (error) {
       console.error('Error fetching subscriptions:', error.response?.data || error.message);
     }
   };
 
-  // Add function to fetch orders
   const fetchUserOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3001/api/orders/my-orders', {
+      const response = await axios.get(`${API_BASE_URL}/api/orders/my-orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUserOrders(response.data.data || response.data); // Handle both response formats
+      setUserOrders(response.data.data || response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -172,7 +171,7 @@ function Dashboard() {
           </Row>
         </Tab>
 
-        {/* Orders Tab - Updated with real data */}
+        {/* Orders Tab */}
         <Tab eventKey="orders" title="Order History">
           {userOrders.length === 0 ? (
             <Card className="text-center p-4">
@@ -188,7 +187,7 @@ function Dashboard() {
           ) : (
             <Card>
               <Card.Header>
-                <h5>Your Orders</h5>
+                <h5>Your Orders ({userOrders.length} orders)</h5>
               </Card.Header>
               <Card.Body>
                 <Table responsive>
@@ -202,20 +201,19 @@ function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                  {userOrders.map(order => (
-  <tr key={order.id}>
-    <td>#{order.id}</td>
-    <td>{order.items?.length || 0} items</td>
-    <td>₹{parseFloat(order.total_amount || order.total || 0).toFixed(2)}</td>
-    <td>
-      <Badge bg={order.status === 'delivered' ? 'success' : 'warning'}>
-        {order.status}
-      </Badge>
-    </td>
-    <td>{new Date(order.created_at).toLocaleDateString()}</td>
-  </tr>
-))}
-
+                    {userOrders.map(order => (
+                      <tr key={order.id}>
+                        <td>#{order.id}</td>
+                        <td>{order.items?.length || 0} items</td>
+                        <td>₹{parseFloat(order.total_amount || order.total || 0).toFixed(2)}</td>
+                        <td>
+                          <Badge bg={order.status === 'delivered' ? 'success' : 'warning'}>
+                            {order.status}
+                          </Badge>
+                        </td>
+                        <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </Table>
               </Card.Body>
