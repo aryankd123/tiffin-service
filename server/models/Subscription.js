@@ -82,17 +82,18 @@ class Subscription {
     }
   }
 
-  // Update subscription status
-  static async updateStatus(id, status) {
-    try {
-      const query = 'UPDATE subscriptions SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *';
-      const result = await pool.query(query, [status, id]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error in updateStatus:', error);
-      throw error;
-    }
-  }
+  // In server/models/Subscription.js
+static async updateStatus(id, status) {
+  const query = `
+    UPDATE subscriptions 
+    SET status = $1, updated_at = CURRENT_TIMESTAMP 
+    WHERE id = $2 
+    RETURNING *
+  `;
+  const result = await pool.query(query, [status, id]);
+  return result.rows[0];
+}
+
 
   // Get active subscriptions for a user - FIXED: Remove non-existent columns
   static async getActiveByUserId(userId) {
