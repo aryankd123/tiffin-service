@@ -36,4 +36,6 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// Export as both default and named export to support both import styles
 module.exports = authenticateToken;
+module.exports.authenticateToken = authenticateToken;

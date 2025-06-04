@@ -4,15 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
+import AddressManager from '../components/AddressManager';
 
 function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth(); // Removed unused 'logout'
   const [userSubscriptions, setUserSubscriptions] = useState([]);
   const [userOrders, setUserOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState(null);
+  const [showAddressManager, setShowAddressManager] = useState(false);
+  const [userAddresses, setUserAddresses] = useState([]);
 
   const handleViewDetails = (subscription) => {
     setSelectedSubscription(subscription);
@@ -43,6 +45,7 @@ function Dashboard() {
     
     fetchUserSubscriptions();
     fetchUserOrders();
+    fetchUserAddresses(); // Added address fetching
   }, [user, navigate]);
 
   const fetchUserSubscriptions = async () => {
@@ -70,8 +73,19 @@ function Dashboard() {
       setUserOrders(response.data.data || response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  // Added address fetching function
+  const fetchUserAddresses = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/api/addresses`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserAddresses(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
     }
   };
 
@@ -256,8 +270,35 @@ function Dashboard() {
                   <h5>Delivery Addresses</h5>
                 </Card.Header>
                 <Card.Body>
-                  <p className="text-muted">No delivery addresses added yet.</p>
-                  <Button variant="primary">Add Address</Button>
+                  {userAddresses.length === 0 ? (
+                    <p className="text-muted">No delivery addresses added yet.</p>
+                  ) : (
+                    <div>
+                      <p className="text-muted mb-2">{userAddresses.length} address(es) saved</p>
+                      {userAddresses.slice(0, 2).map(address => (
+                        <div key={address.id} className="mb-2 p-2 border rounded">
+                          <div className="d-flex justify-content-between align-items-start">
+                            <div>
+                              <strong>{address.title}</strong>
+                              {address.is_default && <Badge bg="success" className="ms-2">Default</Badge>}
+                              <br />
+                              <small className="text-muted">{address.city}, {address.state}</small>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {userAddresses.length > 2 && (
+                        <small className="text-muted">+{userAddresses.length - 2} more addresses</small>
+                      )}
+                    </div>
+                  )}
+                  <Button 
+                    variant="primary" 
+                    onClick={() => setShowAddressManager(true)}
+                    className="mt-2"
+                  >
+                    {userAddresses.length === 0 ? 'Add Address' : 'Manage Addresses'}
+                  </Button>
                 </Card.Body>
               </Card>
             </Col>
@@ -288,6 +329,13 @@ function Dashboard() {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Address Manager Modal */}
+      <AddressManager
+        show={showAddressManager}
+        onHide={() => setShowAddressManager(false)}
+        onAddressAdded={fetchUserAddresses}
+      />
     </Container>
   );
 }

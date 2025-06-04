@@ -5,7 +5,6 @@ require('dotenv').config();
 const app = express();
 
 // Middleware (put body parsing FIRST)
-
 app.use(cors({
   origin: [
     'http://localhost:3000',                    // React development server
@@ -29,7 +28,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001; // Changed from 5000 to 3001
 
 // Basic routes
 app.get('/', (req, res) => {
@@ -68,6 +67,15 @@ try {
   console.log('Subscription routes loaded successfully');
 } catch (error) {
   console.error('Error loading subscription routes:', error.message);
+}
+
+// Add address routes
+try {
+  const addressRoutes = require('./routes/addressRoutes');
+  app.use('/api/addresses', addressRoutes);
+  console.log('Address routes loaded successfully');
+} catch (error) {
+  console.error('Error loading address routes:', error.message);
 }
 
 // Start server
