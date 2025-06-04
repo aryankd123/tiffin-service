@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 function Login() {
@@ -13,6 +14,7 @@ function Login() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   // Handle regular email/password login
   const handleSubmit = async (e) => {
@@ -24,8 +26,8 @@ function Login() {
     try {
       const response = await axios.post('http://localhost:3001/api/auth/login', formData);
       
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      // Use the context login function instead of directly setting localStorage
+      login(response.data.user, response.data.token);
       
       setSuccess('Login successful! Welcome back!');
       setTimeout(() => navigate('/menu'), 1500);
@@ -55,9 +57,8 @@ function Login() {
         picture: decoded.picture
       };
       
-      // Store user data (in production, get a proper JWT from your backend)
-      localStorage.setItem('user', JSON.stringify(googleUser));
-      localStorage.setItem('token', credentialResponse.credential);
+      // Use the context login function instead of directly setting localStorage
+      login(googleUser, credentialResponse.credential);
       
       setSuccess('Google login successful! Welcome!');
       setTimeout(() => navigate('/menu'), 1500);
