@@ -18,7 +18,7 @@ class Order {
   static async getByUserId(user_id) {
     const query = `
       SELECT *, 
-      total_amount AS total  // Alias for frontend compatibility
+      total_amount AS total  
       FROM orders 
       WHERE user_id = $1 
       ORDER BY created_at DESC
