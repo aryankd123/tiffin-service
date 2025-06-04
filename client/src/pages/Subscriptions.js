@@ -1,213 +1,252 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Badge, Button, Spinner, Alert } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom'; // Add this import
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
+const Subscription = require('../models/Subscription');
 
-function Subscriptions() {
-  const [subscriptionPlans, setSubscriptionPlans] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate(); // Add this hook
-
-  // Fetch subscription plans from your backend
-  useEffect(() => {
-    fetchSubscriptionPlans();
-  }, []);
-
-  const fetchSubscriptionPlans = async () => {
+class SubscriptionController {
+  // Get all subscription plans
+  static async getAllPlans(req, res) {
     try {
-      setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/subscriptions/plans`);
-      setSubscriptionPlans(response.data.data);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load subscription plans. Please try again.');
-      console.error('Error fetching subscription plans:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ADD THIS FUNCTION - Handle subscription creation
-  const handleSubscribe = async (plan) => {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      alert('Please login to subscribe to a plan');
-      navigate('/login');
-      return;
-    }
-
-    try {
-      // Calculate end date based on plan type
-      const startDate = new Date();
-      const endDate = new Date();
-      
-      if (plan.name.includes('Weekly')) {
-        endDate.setDate(startDate.getDate() + 7);
-      } else if (plan.name.includes('Monthly')) {
-        endDate.setDate(startDate.getDate() + 30);
-      } else {
-        endDate.setDate(startDate.getDate() + 7); // Default to weekly
-      }
-
-      const subscriptionData = {
-        plan_id: plan.id,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        delivery_address: "Default Address - Please update in dashboard"
-      };
-
-      const response = await axios.post(`${API_BASE_URL}/api/subscriptions`, subscriptionData, {
-        headers: { Authorization: `Bearer ${token}` }
+      console.log('Getting all subscription plans...');
+      const plans = await Subscription.getAllPlans();
+      res.json({
+        message: 'Subscription plans retrieved successfully',
+        data: plans
       });
-
-      alert(`Successfully subscribed to ${plan.name}! 🎉`);
-      navigate('/dashboard');
-      
     } catch (error) {
-      console.error('Subscription error:', error);
-      alert('Failed to create subscription. Please try again.');
+      console.error('Error fetching subscription plans:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch subscription plans',
+        error: error.message 
+      });
     }
-  };
-
-  if (loading) {
-    return (
-      <Container className="py-5 text-center">
-        <Spinner animation="border" variant="primary" />
-        <p className="mt-3">Loading subscription plans...</p>
-      </Container>
-    );
   }
 
-  if (error) {
-    return (
-      <Container className="py-5">
-        <Alert variant="danger">
-          {error}
-          <Button variant="outline-danger" className="ms-3" onClick={fetchSubscriptionPlans}>
-            Try Again
-          </Button>
-        </Alert>
-      </Container>
-    );
+  // Create new subscription
+  static async createSubscription(req, res) {
+    try {
+      console.log('=== CREATE SUBSCRIPTION ===');
+      console.log('User from token:', req.user);
+      console.log('Subscription data:', req.body);
+      
+      // Handle different user ID formats (Google vs regular users)
+      const user_id = (req.user.userId || req.user.id || req.user.sub);
+      
+      if (!user_id) {
+        console.error('No user ID found in token');
+        return res.status(400).json({ message: 'User ID not found in token' });
+      }
+      
+      console.log('Creating subscription for user_id:', user_id);
+      
+      const subscriptionData = {
+        user_id: user_id.toString(),
+        ...req.body
+      };
+      
+      const newSubscription = await Subscription.create(subscriptionData);
+      console.log('Subscription created successfully:', newSubscription);
+      
+      res.status(201).json({
+        message: 'Subscription created successfully',
+        data: newSubscription
+      });
+    } catch (error) {
+      console.error('Error creating subscription:', error);
+      res.status(500).json({ 
+        message: 'Failed to create subscription',
+        error: error.message 
+      });
+    }
   }
 
-  return (
-    <Container className="py-5">
-      {/* Page Header */}
-      <Row className="mb-5">
-        <Col className="text-center">
-          <h1 className="display-4">Subscription Plans</h1>
-          <p className="lead text-muted">
-            Choose from our flexible tiffin plans और save money with regular deliveries
-          </p>
-        </Col>
-      </Row>
+  // Get user's subscriptions
+  static async getUserSubscriptions(req, res) {
+    try {
+      console.log('=== GET USER SUBSCRIPTIONS ===');
+      console.log('User from token:', req.user);
+      
+      // Handle different user ID formats (Google vs regular users)
+      const user_id = (req.user.userId || req.user.id || req.user.sub);
+      
+      if (!user_id) {
+        console.error('No user ID found in token');
+        return res.status(400).json({ message: 'User ID not found in token' });
+      }
+      
+      console.log('Getting subscriptions for user_id:', user_id);
+      
+      // Check if Subscription model exists and has getByUserId method
+      if (!Subscription || typeof Subscription.getByUserId !== 'function') {
+        console.error('Subscription model or getByUserId method not found');
+        return res.status(500).json({ 
+          message: 'Subscription service unavailable',
+          error: 'Model method not found'
+        });
+      }
+      
+      const subscriptions = await Subscription.getByUserId(user_id.toString());
+      console.log('Subscriptions found:', subscriptions);
+      
+      res.json({
+        message: 'User subscriptions retrieved successfully',
+        data: subscriptions || []
+      });
+    } catch (error) {
+      console.error('Error fetching user subscriptions:', error);
+      
+      // Don't return mock data in production - return proper error
+      res.status(500).json({ 
+        message: 'Failed to fetch user subscriptions',
+        error: error.message,
+        data: [] // Return empty array instead of mock data
+      });
+    }
+  }
 
-      {/* Subscription Plans */}
-      <Row>
-        {subscriptionPlans.length === 0 ? (
-          <Col className="text-center">
-            <p className="text-muted">No subscription plans available at the moment.</p>
-          </Col>
-        ) : (
-          subscriptionPlans.map(plan => (
-            <Col md={6} lg={4} key={plan.id} className="mb-4">
-              <Card className="h-100 shadow-sm border-0 position-relative">
-                {plan.name.includes('Weekly') && (
-                  <Badge bg="success" className="position-absolute top-0 start-50 translate-middle px-3 py-2">
-                    Popular
-                  </Badge>
-                )}
-                
-                <Card.Body className="text-center p-4">
-                  <div className="mb-3">
-                    {plan.is_vegetarian ? (
-                      <div style={{ fontSize: '60px' }}>🌿</div>
-                    ) : (
-                      <div style={{ fontSize: '60px' }}>🍗</div>
-                    )}
-                  </div>
-                  
-                  <Card.Title className="h4 mb-3">{plan.name}</Card.Title>
-                  
-                  <div className="mb-3">
-                    <span className="h2 text-primary">₹{plan.price}</span>
-                    <small className="text-muted">
-                      {plan.name.includes('Weekly') ? '/week' : 
-                       plan.name.includes('Monthly') ? '/month' : 
-                       '/plan'}
-                    </small>
-                  </div>
-                  
-                  <Card.Text className="text-muted mb-4">
-                    {plan.description}
-                  </Card.Text>
-                  
-                  <div className="mb-4">
-                    <h6>Delivery Days:</h6>
-                    <div className="d-flex flex-wrap justify-content-center gap-1">
-                      {plan.days_of_week.map(day => (
-                        <Badge key={day} bg="outline-primary" className="text-primary border border-primary">
-                          {day.substring(0, 3)}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="mb-4">
-                    {plan.is_vegetarian ? (
-                      <Badge bg="success" className="me-2">🌿 Pure Vegetarian</Badge>
-                    ) : (
-                      <Badge bg="danger" className="me-2">🍗 Non-Vegetarian</Badge>
-                    )}
-                  </div>
-                  
-                  {/* UPDATE THIS BUTTON - Add onClick handler */}
-                  <Button 
-                    variant={plan.name.includes('Weekly') ? 'success' : 'primary'} 
-                    size="lg" 
-                    className="w-100"
-                    onClick={() => handleSubscribe(plan)}
-                  >
-                    Subscribe Now
-                  </Button>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))
-        )}
-      </Row>
+  // Get user's active subscriptions
+  static async getActiveSubscriptions(req, res) {
+    try {
+      console.log('=== GET ACTIVE SUBSCRIPTIONS ===');
+      console.log('User from token:', req.user);
+      
+      // Handle different user ID formats (Google vs regular users)
+      const user_id = (req.user.userId || req.user.id || req.user.sub);
+      
+      if (!user_id) {
+        console.error('No user ID found in token');
+        return res.status(400).json({ message: 'User ID not found in token' });
+      }
+      
+      console.log('Getting active subscriptions for user_id:', user_id);
+      
+      if (!Subscription || typeof Subscription.getActiveByUserId !== 'function') {
+        console.error('Subscription model or getActiveByUserId method not found');
+        return res.status(500).json({ 
+          message: 'Subscription service unavailable',
+          error: 'Model method not found'
+        });
+      }
+      
+      const subscriptions = await Subscription.getActiveByUserId(user_id.toString());
+      console.log('Active subscriptions found:', subscriptions);
+      
+      res.json({
+        message: 'Active subscriptions retrieved successfully',
+        data: subscriptions || []
+      });
+    } catch (error) {
+      console.error('Error fetching active subscriptions:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch active subscriptions',
+        error: error.message 
+      });
+    }
+  }
 
-      {/* Benefits Section */}
-      <Row className="mt-5">
-        <Col>
-          <div className="bg-light p-4 rounded">
-            <h4 className="text-center mb-4">Why Subscribe?</h4>
-            <Row>
-              <Col md={4} className="text-center mb-3">
-                <div style={{ fontSize: '40px' }}>💰</div>
-                <h6>Save Money</h6>
-                <p className="text-muted">Up to 20% savings compared to daily orders</p>
-              </Col>
-              <Col md={4} className="text-center mb-3">
-                <div style={{ fontSize: '40px' }}>📅</div>
-                <h6>Convenience</h6>
-                <p className="text-muted">No daily ordering hassle, automatic delivery</p>
-              </Col>
-              <Col md={4} className="text-center mb-3">
-                <div style={{ fontSize: '40px' }}>🎯</div>
-                <h6>Flexibility</h6>
-                <p className="text-muted">Pause, modify, or cancel anytime</p>
-              </Col>
-            </Row>
-          </div>
-        </Col>
-      </Row>
-    </Container>
-  );
+  // Update subscription status (pause, cancel, reactivate)
+  static async updateSubscriptionStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      console.log(`=== UPDATE SUBSCRIPTION STATUS ===`);
+      console.log(`Updating subscription ${id} status to:`, status);
+      console.log('User from token:', req.user);
+      
+      // Validate status
+      const validStatuses = ['active', 'paused', 'cancelled', 'expired'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ 
+          message: 'Invalid status',
+          validStatuses 
+        });
+      }
+      
+      // Handle different user ID formats (Google vs regular users)
+      const user_id = (req.user.userId || req.user.id || req.user.sub);
+      
+      if (!user_id) {
+        return res.status(400).json({ message: 'User ID not found in token' });
+      }
+      
+      // Check if methods exist
+      if (!Subscription || typeof Subscription.getById !== 'function' || typeof Subscription.updateStatus !== 'function') {
+        return res.status(500).json({ 
+          message: 'Subscription service unavailable',
+          error: 'Model methods not found'
+        });
+      }
+      
+      // Verify subscription belongs to user
+      const subscription = await Subscription.getById(id);
+      if (!subscription) {
+        return res.status(404).json({ message: 'Subscription not found' });
+      }
+      
+      if (subscription.user_id.toString() !== user_id.toString()) {
+        return res.status(403).json({ message: 'Access denied - subscription does not belong to user' });
+      }
+      
+      const updatedSubscription = await Subscription.updateStatus(id, status);
+      console.log('Subscription status updated:', updatedSubscription);
+      
+      res.json({
+        message: 'Subscription status updated successfully',
+        data: updatedSubscription
+      });
+    } catch (error) {
+      console.error('Error updating subscription status:', error);
+      res.status(500).json({ 
+        message: 'Failed to update subscription status',
+        error: error.message 
+      });
+    }
+  }
+
+  // Get single subscription details
+  static async getSubscription(req, res) {
+    try {
+      const { id } = req.params;
+      console.log('=== GET SUBSCRIPTION DETAILS ===');
+      console.log('Getting subscription details for ID:', id);
+      console.log('User from token:', req.user);
+      
+      // Handle different user ID formats (Google vs regular users)
+      const user_id = (req.user.userId || req.user.id || req.user.sub);
+      
+      if (!user_id) {
+        return res.status(400).json({ message: 'User ID not found in token' });
+      }
+      
+      if (!Subscription || typeof Subscription.getById !== 'function') {
+        return res.status(500).json({ 
+          message: 'Subscription service unavailable',
+          error: 'Model method not found'
+        });
+      }
+      
+      const subscription = await Subscription.getById(id);
+      if (!subscription) {
+        return res.status(404).json({ message: 'Subscription not found' });
+      }
+      
+      // Verify subscription belongs to user
+      if (subscription.user_id.toString() !== user_id.toString()) {
+        return res.status(403).json({ message: 'Access denied - subscription does not belong to user' });
+      }
+      
+      console.log('Subscription details retrieved:', subscription);
+      
+      res.json({
+        message: 'Subscription details retrieved successfully',
+        data: subscription
+      });
+    } catch (error) {
+      console.error('Error fetching subscription details:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch subscription details',
+        error: error.message 
+      });
+    }
+  }
 }
 
-export default Subscriptions;
+module.exports = SubscriptionController;
