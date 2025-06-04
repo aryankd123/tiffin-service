@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Badge, Alert, Tabs, Tab, Modal, Table } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Alert, Tabs, Tab, Modal, Table, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -41,6 +41,7 @@ function Dashboard() {
     }
     fetchUserSubscriptions();
     fetchUserOrders();
+    // eslint-disable-next-line
   }, [user, navigate]);
 
   const fetchUserSubscriptions = async () => {
@@ -78,6 +79,15 @@ function Dashboard() {
             Login
           </Button>
         </Alert>
+      </Container>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Container className="py-5 text-center">
+        <Spinner animation="border" variant="primary" />
+        <p className="mt-3">Loading your dashboard...</p>
       </Container>
     );
   }
