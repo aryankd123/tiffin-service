@@ -1,11 +1,11 @@
-# TiffinExpress 🍛
+# TiffinExpress 
 
 A modern, full-stack Indian tiffin subscription and ordering platform.  
 Built with React, Node.js, Express, and PostgreSQL.
 
 ---
 
-## 🚀 Features
+##  Features
 
 - 🇮🇳 Indian tiffin menu with veg, non-veg, and Jain options
 - User authentication (email/password & Google OAuth)
@@ -17,7 +17,7 @@ Built with React, Node.js, Express, and PostgreSQL.
 
 ---
 
-## 🏗️ Tech Stack
+##  Tech Stack
 
 - **Frontend:** React, React Router, Bootstrap
 - **Backend:** Node.js, Express.js, JWT Auth
@@ -27,39 +27,7 @@ Built with React, Node.js, Express, and PostgreSQL.
 
 ---
 
-## 📸 Screenshots
-
-### Home Page
-![Home](assets/Home.png)
-
-### Home2(footer) Page
-![Home](assets/Home2.png)
-
-### Menu Page
-![Menu](assets/Menu.png)
-
-### Cart Page
-![Cart](assets/Cart.png)
-
-### Signup Page
-![Signup](assets/Signup.png)
-
-### Login Page
-![Login](assets/Login.png)
-
-### Orders Page
-![Orders](assets/Orders_placed.png)
-
-### Order_placed 
-![Orders](assets/Order_placed.png)
-
-### Subscription Page
-![Subscription](assets/Subscription.png)
-
-### Subscription_added 
-![Subscription](assets/Subscription_added.png)
-
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -138,7 +106,7 @@ The application uses PostgreSQL with the following main tables:
 - `menu_items` - Food menu items
 
 
-## 📱 Usage
+##  Usage
 
 1. **User Registration/Login**
 - Sign up with email/password or Google OAuth
@@ -157,7 +125,7 @@ The application uses PostgreSQL with the following main tables:
 - Manage active subscriptions
 
 
-## 🧪 Testing
+##  Testing
 
 Run backend tests
 cd server
@@ -167,7 +135,7 @@ Run frontend tests
 cd client
 npm test
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -180,7 +148,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ❌ Liability
 - ❌ Warranty
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -190,11 +158,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 👨‍💻 Author
+##  Author
 
 **Aryan** - [aryankd123](https://github.com/aryankd123)
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Google OAuth for authentication
 - React Bootstrap for UI components
