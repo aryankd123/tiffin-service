@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tiffin dev: Google sign-in</title>
+  <!-- Dev-only page. Gets a Google ID token with "Sign in with Google" so the
+       API can be tested without the OAuth Playground. No client secret is used anywhere. -->
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; background: #fafafa; color: #222; }
+    input { width: 100%; padding: 8px; font-family: monospace; box-sizing: border-box; }
+    textarea { width: 100%; height: 120px; font-family: monospace; font-size: 12px; box-sizing: border-box; }
+    pre { background: #fff; border: 1px solid #ddd; padding: 12px; overflow-x: auto; }
+    button { padding: 8px 14px; margin: 8px 8px 8px 0; }
+    .warn { color: #a40; }
+  </style>
+</head>
+<body>
+  <h1>Tiffin dev: get a Google ID token</h1>
+  <p>Open this page at <code>http://localhost:5173/google-signin.html</code>. That origin must be listed under
+     <em>Authorized JavaScript origins</em> for your OAuth client.</p>
+
+  <label>OAuth client ID (not secret; same value as <code>GOOGLE_CLIENT_ID</code> in <code>.env</code>)</label>
+  <input id="clientId" placeholder="1234567890-abc.apps.googleusercontent.com">
+  <button id="load">Show Google button</button>
+  <div id="gbutton"></div>
+
+  <div id="result" hidden>
+    <h2>Decoded claims (what the API will check)</h2>
+    <pre id="claims"></pre>
+    <h2>ID token</h2>
+    <p class="warn">Valid for about 1 hour. Anyone holding it can sign in to Tiffin as you until it expires. Don't paste it into chats.</p>
+    <textarea id="token" readonly></textarea>
+    <button id="download">Download as google_id_token.txt</button>
+    <button id="copy">Copy</button>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function decodePayload(jwt) {
+      const b64 = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(decodeURIComponent(escape(atob(b64))));
+    }
+
+    function onCredential(response) {
+      const token = response.credential;
+      const p = decodePayload(token);
+      $('claims').textContent = JSON.stringify({
+        iss: p.iss,
+        aud: p.aud,
+        sub: p.sub,
+        email: p.email,
+        email_verified: p.email_verified,
+        expires: new Date(p.exp * 1000).toLocaleString(),
+      }, null, 2);
+      $('token').value = token;
+      $('result').hidden = false;
+    }
+
+    $('load').onclick = () => {
+      const clientId = $('clientId').value.trim();
+      if (!clientId.endsWith('.apps.googleusercontent.com')) {
+        alert('That does not look like an OAuth client ID.');
+        return;
+      }
+      google.accounts.id.initialize({ client_id: clientId, callback: onCredential });
+      google.accounts.id.renderButton($('gbutton'), { theme: 'outline', size: 'large' });
+    };
+
+    $('download').onclick = () => {
+      const blob = new Blob([$('token').value], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'google_id_token.txt';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    $('copy').onclick = () => navigator.clipboard.writeText($('token').value);
+  </script>
+</body>
+</html>
