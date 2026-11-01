@@ -1,8 +1,9 @@
 const express = require('express');
 const { z } = require('zod');
 const { requireAuth } = require('../middleware/auth');
-const { idParam, isoDate, weekdays } = require('../validation/common');
+const { idParam, isoDate, weekdays, paymentVerify } = require('../validation/common');
 const subscriptionService = require('../services/subscriptionService');
+const paymentService = require('../services/paymentService');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -24,9 +25,18 @@ const skipSchema = z.union([
 
 const params = z.object({ id: idParam });
 
+// Paid upfront: the subscription starts as 'awaiting_payment' and the checkout
+// starts right away. If the gateway is down, the client retries with POST /subscriptions/:id/payment.
 router.post('/', async (req, res) => {
   const body = subscribeSchema.parse(req.body);
-  res.status(201).json({ subscription: await subscriptionService.subscribe(req.user, body) });
+  const subscription = await subscriptionService.subscribe(req.user, body);
+  let payment = null;
+  try {
+    payment = await paymentService.checkoutForSubscription(req.user, subscription.id);
+  } catch (err) {
+    if (err.code !== 'PAYMENT_GATEWAY_UNAVAILABLE') throw err;
+  }
+  res.status(201).json({ subscription, payment });
 });
 
 router.get('/', async (req, res) => {
@@ -36,6 +46,19 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const { id } = params.parse(req.params);
   res.json({ subscription: await subscriptionService.getSubscription(req.user, id) });
+});
+
+// Starts or returns the checkout for one of the caller's subscriptions (safe to repeat).
+router.post('/:id/payment', async (req, res) => {
+  const { id } = params.parse(req.params);
+  res.status(201).json({ payment: await paymentService.checkoutForSubscription(req.user, id) });
+});
+
+router.post('/:id/payment/verify', async (req, res) => {
+  const { id } = params.parse(req.params);
+  const body = paymentVerify.parse(req.body);
+  const payment = await paymentService.verifySubscriptionPayment(req.user, id, body);
+  res.json({ payment, subscription: await subscriptionService.getSubscription(req.user, id) });
 });
 
 router.post('/:id/cancel', async (req, res) => {

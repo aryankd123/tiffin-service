@@ -14,6 +14,7 @@ const orderRoutes = require('./routes/orders');
 const subscriptionRoutes = require('./routes/subscriptions');
 const deliveryRoutes = require('./routes/deliveries');
 const devRoutes = require('./routes/dev');
+const webhookRoutes = require('./routes/webhooks');
 const config = require('./config');
 
 // Builds the app without listening, so tests can import it and drive it with supertest.
@@ -22,6 +23,8 @@ function createApp() {
 
   app.use(helmet());
   app.use(pinoHttp({ logger }));
+  // Webhooks are verified against their raw bytes, so they're mounted before the JSON parser.
+  app.use('/api/v1/payments', webhookRoutes);
   app.use(express.json({ limit: '100kb' }));
 
   // Express 5 forwards a rejected promise from an async handler to errorHandler.

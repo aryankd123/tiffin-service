@@ -56,6 +56,13 @@ const weekdays = z
   .refine((days) => new Set(days).size === days.length, 'each weekday may appear only once')
   .transform((days) => days.map((d) => WEEKDAYS.indexOf(d) + 1).sort((a, b) => a - b));
 
+// What Razorpay's checkout hands back to the browser after a successful payment.
+const paymentVerify = z.object({
+  gatewayPaymentId: z.string().min(1).max(100),
+  signature: z.string().regex(/^[0-9a-f]{64}$/, 'must be a 64-character hex signature'),
+});
+
 module.exports = {
   idParam, location, indianMobile, pinCode, optionalText, isoDate, weekdays, WEEKDAYS, INDIA_BOX,
+  paymentVerify,
 };

@@ -29,7 +29,7 @@ router.post('/fake-gateway/pay', fakeOnly, (req, res) => {
 });
 
 const JOBS = {
-  payments: () => paymentService.reconcileAndExpireOrders(),
+  payments: () => paymentService.reconcileAndExpire(),
   refunds: () => paymentService.processRefunds(),
   'auto-cancel': () => cancelUnconfirmedOrders(),
 };

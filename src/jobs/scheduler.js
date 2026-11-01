@@ -8,16 +8,17 @@ const logger = require('../logger');
 const clock = require('../clock');
 const { scheduleDeliveries } = require('./subscriptionDeliveries');
 const { cancelUnconfirmedOrders } = require('./autoCancelOrders');
-const { reconcileAndExpireOrders, processRefunds } = require('../services/paymentService');
+const { reconcileAndExpire, processRefunds } = require('../services/paymentService');
 
 const JOB_LOCK_ID = 727275; // the migration runner uses 727274
 const TICK_MS = 60 * 1000;
 
 async function runDueJobs() {
-  // Payments first: a payment found by the status check makes its order 'pending' in this tick.
-  const payments = await reconcileAndExpireOrders();
+  // Payments first: a payment found by the status check makes its order 'pending' (or its
+  // subscription 'active') in this tick.
+  const payments = await reconcileAndExpire();
   if (payments.paid + payments.expired + payments.errors > 0) {
-    logger.info(payments, 'job: order payments checked');
+    logger.info(payments, 'job: payments checked');
   }
   const { cancelled, refundsRequested } = await cancelUnconfirmedOrders();
   if (cancelled.length > 0) {

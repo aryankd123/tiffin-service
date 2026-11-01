@@ -1,7 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const { requireAuth } = require('../middleware/auth');
-const { idParam } = require('../validation/common');
+const { idParam, paymentVerify } = require('../validation/common');
 const orderService = require('../services/orderService');
 const paymentService = require('../services/paymentService');
 
@@ -58,15 +58,9 @@ router.post('/:id/payment', async (req, res) => {
   res.status(201).json({ payment: await paymentService.checkoutForOrder(req.user, id) });
 });
 
-// What Razorpay's checkout hands back to the browser after a successful payment.
-const verifySchema = z.object({
-  gatewayPaymentId: z.string().min(1).max(100),
-  signature: z.string().regex(/^[0-9a-f]{64}$/, 'must be a 64-character hex signature'),
-});
-
 router.post('/:id/payment/verify', async (req, res) => {
   const { id } = params.parse(req.params);
-  const body = verifySchema.parse(req.body);
+  const body = paymentVerify.parse(req.body);
   const payment = await paymentService.verifyOrderPayment(req.user, id, body);
   res.json({ payment, order: await orderService.getOrder(req.user, id) });
 });
