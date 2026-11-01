@@ -13,6 +13,8 @@ const userRoutes = require('./routes/users');
 const orderRoutes = require('./routes/orders');
 const subscriptionRoutes = require('./routes/subscriptions');
 const deliveryRoutes = require('./routes/deliveries');
+const devRoutes = require('./routes/dev');
+const config = require('./config');
 
 // Builds the app without listening, so tests can import it and drive it with supertest.
 function createApp() {
@@ -37,6 +39,8 @@ function createApp() {
   app.use('/api/v1/orders', orderRoutes);
   app.use('/api/v1/subscriptions', subscriptionRoutes);
   app.use('/api/v1/deliveries', deliveryRoutes);
+  // Development helpers: never part of a production server.
+  if (config.NODE_ENV !== 'production') app.use('/api/v1/dev', devRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

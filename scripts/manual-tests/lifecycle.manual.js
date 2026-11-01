@@ -3,7 +3,7 @@
 // Run from the server folder:  node scripts/manual-tests/lifecycle.manual.js
 require('../../src/config'); // loads .env (SEED_PASSWORD)
 const { pool } = require('../../src/db');
-const { call, show, note, registerUser, login, placeOrder } = require('./_http');
+const { call, show, note, registerUser, login, placeOrder, placePaidOrder } = require('./_http');
 
 const SEED_PASSWORD = process.env.SEED_PASSWORD;
 const statusOf = (r) => r.json.order?.status ?? r.json.error?.code;
@@ -17,7 +17,8 @@ const timeline = (order) => order.history.map((h) => `${h.from ?? '∅'}→${h.t
   const kora = (await pool.query("SELECT id FROM restaurants WHERE name = 'Seed Koramangala Kitchen'")).rows[0].id;
   const dosa = (await pool.query("SELECT id FROM menu_items WHERE restaurant_id = $1 AND name = 'Masala Dosa'", [kora])).rows[0].id;
   const cart = { restaurantId: kora, addressId: home.id, items: [{ menuItemId: dosa, quantity: 1 }] };
-  const newOrder = async () => (await placeOrder(customer.token, cart)).json.order.id;
+  // An order reaches the restaurant only once paid, so these orders are paid (fake gateway).
+  const newOrder = async () => (await placePaidOrder(customer.token, cart)).json.order.id;
 
   // A second vendor who owns nothing here.
   const other = await registerUser('vendor.other');
@@ -68,11 +69,13 @@ const timeline = (order) => order.history.map((h) => `${h.from ?? '∅'}→${h.t
     ]);
     const key = `cancel ${statusOf(c)} / confirm ${statusOf(v)}`;
     outcomes[key] = (outcomes[key] ?? 0) + 1;
-    const h = (await pool.query('SELECT count(*)::int AS n FROM order_status_history WHERE order_id = $1', [id])).rows[0].n;
-    if (h === 2) historyOk++;
+    // Exactly one change away from 'pending' (an order also has its payment row).
+    const h = (await pool.query(
+      "SELECT count(*)::int AS n FROM order_status_history WHERE order_id = $1 AND from_status = 'pending'", [id])).rows[0].n;
+    if (h === 1) historyOk++;
   }
   for (const [k, n] of Object.entries(outcomes)) console.log(`T13    ${String(n).padStart(2)} × ${k}`);
-  note(`orders with exactly 2 history rows (created + one change): ${historyOk}/10`);
+  note(`orders changed from 'pending' exactly once: ${historyOk}/10`);
 
   console.log('\n=== T14 database trigger (direct SQL, bypassing the service)');
   const o5 = await newOrder();

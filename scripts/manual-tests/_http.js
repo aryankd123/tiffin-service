@@ -56,4 +56,17 @@ async function placeOrder(token, body, key = crypto.randomUUID()) {
   return { status: res.status, json, replayed: res.headers.get('idempotent-replayed') };
 }
 
-module.exports = { call, show, note, registerUser, login, placeOrder };
+// Pays for an order through the fake gateway, like a browser finishing Razorpay's checkout
+//. Needs PAYMENT_PROVIDER=fake on the server.
+async function payOrder(token, orderId, payment) {
+  const paid = await call('POST', '/dev/fake-gateway/pay', { token, body: { gatewayOrderId: payment.gatewayOrderId } });
+  return call('POST', `/orders/${orderId}/payment/verify`, { token, body: paid.json });
+}
+
+async function placePaidOrder(token, body) {
+  const placed = await placeOrder(token, body);
+  await payOrder(token, placed.json.order.id, placed.json.payment);
+  return placed;
+}
+
+module.exports = { call, show, note, registerUser, login, placeOrder, payOrder, placePaidOrder };

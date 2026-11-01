@@ -17,6 +17,19 @@ const schema = z.object({
   // Scheduled jobs (nightly subscription deliveries, auto-cancel) run inside the server unless
   // switched off, e.g. for a second instance or while debugging.
   JOBS_ENABLED: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
+  // Payments. 'fake' is an offline gateway for development and tests; 'razorpay' talks
+  // to Razorpay (test-mode keys start with rzp_test_). The key secret signs checkout results.
+  PAYMENT_PROVIDER: z.enum(['fake', 'razorpay']).default('fake'),
+  RAZORPAY_KEY_ID: z.string().min(1).optional(),
+  RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
+}).superRefine((c, ctx) => {
+  if (c.PAYMENT_PROVIDER === 'razorpay' && (!c.RAZORPAY_KEY_ID || !c.RAZORPAY_KEY_SECRET)) {
+    ctx.addIssue({ code: 'custom', path: ['RAZORPAY_KEY_ID'], message: 'required when PAYMENT_PROVIDER=razorpay (with RAZORPAY_KEY_SECRET)' });
+  }
+  if (c.NODE_ENV === 'production' && c.PAYMENT_PROVIDER === 'fake') {
+    ctx.addIssue({ code: 'custom', path: ['PAYMENT_PROVIDER'], message: 'the fake gateway is not allowed in production' });
+  }
 });
 
 const parsed = schema.safeParse(process.env);

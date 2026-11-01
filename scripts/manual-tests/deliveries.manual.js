@@ -11,7 +11,7 @@ const clock = require('../../src/clock');
 const { scheduleDeliveries } = require('../../src/jobs/subscriptionDeliveries');
 const { cancelUnconfirmedOrders } = require('../../src/jobs/autoCancelOrders');
 const { tick, JOB_LOCK_ID } = require('../../src/jobs/scheduler');
-const { call, show, note, registerUser, login, placeOrder } = require('./_http');
+const { call, show, note, registerUser, login, placePaidOrder } = require('./_http');
 
 const SEED_PASSWORD = process.env.SEED_PASSWORD;
 const ok = (b) => (b ? 'yes' : 'NO');
@@ -146,20 +146,21 @@ const deliveryOf = async (subId, date) => (await pool.query(
 
   console.log('\n=== X1-X4 auto-cancel and the scheduler lock');
   const kora2 = { restaurantId: kora, addressId: home.id, items: [{ menuItemId: (await pool.query("SELECT id FROM menu_items WHERE restaurant_id = $1 AND name = 'Masala Dosa'", [kora])).rows[0].id, quantity: 1 }] };
-  const stale = (await placeOrder(customer.token, kora2)).json.order.id;
-  const fresh = (await placeOrder(customer.token, kora2)).json.order.id;
-  await pool.query("UPDATE orders SET created_at = now() - interval '20 minutes' WHERE id = $1", [stale]);
-  note(`orders ${stale} (SQL: placed 20 minutes ago) and ${fresh} (just placed)`);
+  // The 15 minutes count from payment, so these orders are paid (fake gateway).
+  const stale = (await placePaidOrder(customer.token, kora2)).json.order.id;
+  const fresh = (await placePaidOrder(customer.token, kora2)).json.order.id;
+  await pool.query("UPDATE payments SET paid_at = now() - interval '20 minutes' WHERE order_id = $1", [stale]);
+  note(`orders ${stale} (SQL: paid 20 minutes ago) and ${fresh} (just placed)`);
   const cancelled = await cancelUnconfirmedOrders();
   const x1 = await call('GET', `/orders/${stale}`, { token: customer.token });
   const last = x1.json.order.history.at(-1);
-  show('X1', 'auto-cancel job', x1, `→ cancelled ${JSON.stringify(cancelled)}; ${stale}: ${x1.json.order.status} by ${last.actor}, user ${last.changedByUserId}, "${last.note}"; ${fresh} still ${(await call('GET', `/orders/${fresh}`, { token: customer.token })).json.order.status}`);
+  show('X1', 'auto-cancel job', x1, `→ cancelled ${JSON.stringify(cancelled.cancelled)}; ${stale}: ${x1.json.order.status} by ${last.actor}, user ${last.changedByUserId}, "${last.note}"; ${fresh} still ${(await call('GET', `/orders/${fresh}`, { token: customer.token })).json.order.status}`);
   show('X2', 'the vendor confirms the auto-cancelled order', await call('PATCH', `/orders/${stale}/status`, { token: vendor.token, body: { status: 'confirmed' } }));
   await sqlBlocked('X3a', "history: actor 'system' with a user id",
     "INSERT INTO order_status_history (order_id, from_status, to_status, changed_by_user_id, actor) VALUES ($1, 'pending', 'cancelled', $2, 'system')", [fresh, customer.id]);
   await sqlBlocked('X3b', "history: actor 'customer' with no user",
     "INSERT INTO order_status_history (order_id, from_status, to_status, changed_by_user_id, actor) VALUES ($1, 'pending', 'cancelled', NULL, 'customer')", [fresh]);
-  await pool.query("UPDATE orders SET created_at = now() - interval '20 minutes' WHERE id = $1", [fresh]);
+  await pool.query("UPDATE payments SET paid_at = now() - interval '20 minutes' WHERE order_id = $1", [fresh]);
   const holder = await pool.connect();
   await holder.query('SELECT pg_advisory_lock($1)', [JOB_LOCK_ID]);
   await tick();

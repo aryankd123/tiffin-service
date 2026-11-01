@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const { pool, withTransaction } = require('../db');
 const { AppError } = require('../errors');
 const { assertCanManage } = require('./restaurantService');
+const { requestRefund, paymentSummaryForOrder } = require('./paymentService');
 
 // ₹50,000 per order. Also keeps every amount far below INTEGER's ₹2.1 crore limit.
 const MAX_ORDER_TOTAL_PAISE = 5000000;
@@ -22,7 +23,7 @@ const ORDER_COLUMNS = `o.id, o.user_id, o.status, o.restaurant_id, r.name AS res
   ST_Y(o.delivery_location::geometry) AS lat, ST_X(o.delivery_location::geometry) AS lng,
   o.subtotal_paise, o.delivery_fee_paise, o.total_paise, o.created_at`;
 
-function toOrder(row, items, history) {
+function toOrder(row, items, history, payment) {
   return {
     id: row.id,
     status: row.status,
@@ -55,6 +56,7 @@ function toOrder(row, items, history) {
       note: h.note,
       at: h.changed_at,
     })),
+    payment, // null until the checkout starts
   };
 }
 
@@ -75,7 +77,7 @@ async function loadOrder(db, orderId) {
      FROM order_status_history WHERE order_id = $1 ORDER BY changed_at, id`,
     [orderId],
   );
-  return toOrder(rows[0], items.rows, history.rows);
+  return toOrder(rows[0], items.rows, history.rows, await paymentSummaryForOrder(db, orderId));
 }
 
 async function findByKey(db, userId, idempotencyKey) {
@@ -204,10 +206,11 @@ async function placeOrder(userId, idempotencyKey, input) {
         lines.map((l) => l.quantity), lines.map((l) => l.unitPrice)],
     );
 
-    // 8. The order's timeline starts here.
+    // 8. The order's timeline starts here. It waits for payment before the restaurant
+    //    sees it; the column default is 'awaiting_payment' too.
     await client.query(
       `INSERT INTO order_status_history (order_id, from_status, to_status, changed_by_user_id, actor)
-       VALUES ($1, NULL, 'pending', $2, 'customer')`,
+       VALUES ($1, NULL, 'awaiting_payment', $2, 'customer')`,
       [orderId, userId],
     );
 
@@ -227,16 +230,21 @@ const FORWARD = {
 };
 
 // From which statuses each actor may cancel.
+// Before payment ('awaiting_payment') only the customer or an admin can cancel: the restaurant
+// doesn't see unpaid orders.
 const CANCELLABLE_FROM = {
-  customer: ['pending'],
+  customer: ['awaiting_payment', 'pending'],
   restaurant: ['pending', 'confirmed'],
-  admin: ['pending', 'confirmed'],
+  admin: ['awaiting_payment', 'pending', 'confirmed'],
 };
+
+// An order reaches the restaurant only once paid.
+const HIDDEN_FROM_RESTAURANT = ['awaiting_payment', 'expired'];
 
 // In what capacity the user relates to this order, or null if not at all.
 function actorFor(user, access) {
   if (user.role === 'admin') return 'admin';
-  if (access.owner_user_id === user.id) return 'restaurant';
+  if (access.owner_user_id === user.id && !HIDDEN_FROM_RESTAURANT.includes(access.status)) return 'restaurant';
   if (access.user_id === user.id) return 'customer';
   return null;
 }
@@ -313,6 +321,13 @@ async function cancelOrder(user, orderId, reason) {
         { status: access.status, allowedFrom });
     }
     await compareAndSet(client, orderId, access.status, 'cancelled', user, actor, reason);
+    // A paid order is refunded in full, whoever cancels. Recorded here, in the same
+    // transaction; the refund job sends it to the gateway.
+    const paid = await client.query(
+      "SELECT id, amount_paise FROM payments WHERE order_id = $1 AND status = 'paid'", [orderId]);
+    if (paid.rows[0]) {
+      await requestRefund(client, paid.rows[0].id, paid.rows[0].amount_paise, `Order cancelled by ${actor}`);
+    }
     return loadOrder(client, orderId);
   });
 }
@@ -392,7 +407,7 @@ async function listCustomerOrders(userId, options) {
 // A restaurant's incoming orders for its owner or an admin (index orders_restaurant_created_idx).
 async function listRestaurantOrders(user, restaurantId, { status, ...options }) {
   await assertCanManage(pool, user, restaurantId);
-  const filters = [['o.restaurant_id = $1', restaurantId]];
+  const filters = [['o.restaurant_id = $1', restaurantId], ["o.status NOT IN ('awaiting_payment', 'expired')"]];
   if (status) filters.push(['o.status = $1', status]);
   return listPage(filters, options);
 }
