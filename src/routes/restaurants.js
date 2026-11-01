@@ -1,9 +1,11 @@
 const express = require('express');
 const { z } = require('zod');
 const { requireAuth, requireRole } = require('../middleware/auth');
-const { idParam, location, optionalText } = require('../validation/common');
+const { idParam, location, optionalText, isoDate } = require('../validation/common');
 const restaurantService = require('../services/restaurantService');
 const orderService = require('../services/orderService');
+const planService = require('../services/planService');
+const deliveryService = require('../services/deliveryService');
 
 const router = express.Router();
 const vendorOnly = [requireAuth, requireRole('vendor_admin', 'admin')];
@@ -81,6 +83,51 @@ router.patch('/:id', ...vendorOnly, async (req, res) => {
   const { id } = params.parse(req.params);
   const patch = patchSchema.parse(req.body);
   res.json({ restaurant: await restaurantService.updateRestaurant(req.user, id, patch) });
+});
+
+// Subscription plans: a number of meals for one meal slot.
+const planSchema = z.object({
+  name,
+  description: optionalText(500),
+  mealSlot: z.enum(['lunch', 'dinner']),
+  mealsCount: z.number().int().min(1).max(60),
+  pricePaise: z.number().int().min(100).max(5000000), // the whole plan: ₹1 to ₹50,000
+});
+
+const planPatchSchema = z
+  .object({
+    name: name.optional(),
+    description: optionalText(500),
+    pricePaise: z.number().int().min(100).max(5000000).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .strict()
+  .refine((p) => Object.values(p).some((v) => v !== undefined), 'at least one field is required');
+
+const planParams = z.object({ id: idParam, planId: idParam });
+
+router.get('/:id/plans', async (req, res) => {
+  const { id } = params.parse(req.params);
+  res.json({ plans: await planService.listPublicPlans(id) });
+});
+
+router.post('/:id/plans', ...vendorOnly, async (req, res) => {
+  const { id } = params.parse(req.params);
+  const body = planSchema.parse(req.body);
+  res.status(201).json({ plan: await planService.createPlan(req.user, id, body) });
+});
+
+router.patch('/:id/plans/:planId', ...vendorOnly, async (req, res) => {
+  const { id, planId } = planParams.parse(req.params);
+  const patch = planPatchSchema.parse(req.body);
+  res.json({ plan: await planService.updatePlan(req.user, id, planId, patch) });
+});
+
+// The day's subscription deliveries (head-count) for the owner or an admin.
+router.get('/:id/deliveries', ...vendorOnly, async (req, res) => {
+  const { id } = params.parse(req.params);
+  const { date } = z.object({ date: isoDate }).parse(req.query);
+  res.json(await deliveryService.listForRestaurant(req.user, id, date));
 });
 
 // The restaurant's incoming orders, newest first, for its owner or an admin.

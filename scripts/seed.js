@@ -34,6 +34,8 @@ const RESTAURANTS = [
   {
     name: 'Seed Koramangala Kitchen', city: 'Bengaluru', lat: 12.9352, lng: 77.6245, radius: 6000, fee: 3000,
     menu: [['Veg Thali', 15000, true], ['Masala Dosa', 9000, true], ['Chicken Biryani', 22000, false]],
+    // Subscription plans: [name, meal slot, number of meals, price for all meals in paise]
+    plans: [['20 Lunches', 'lunch', 20, 280000], ['20 Dinners', 'dinner', 20, 300000]],
   },
   {
     name: 'Seed Indiranagar Tiffins', city: 'Bengaluru', lat: 12.9784, lng: 77.6408, radius: 4000, fee: 2500,
@@ -42,10 +44,12 @@ const RESTAURANTS = [
   {
     name: 'Seed Connaught Place Thali', city: 'Delhi', lat: 28.6315, lng: 77.2167, radius: 5000, fee: 4000,
     menu: [['Rajma Chawal', 13000, true], ['Chole Bhature', 14000, true]],
+    plans: [['22 Weekday Lunches', 'lunch', 22, 286000]],
   },
   {
     name: 'Seed Noida Sector 18 Meals', city: 'Noida', lat: 28.5708, lng: 77.3261, radius: 15000, fee: 5000,
     menu: [['Home Style Thali', 16000, true], ['Paneer Paratha', 9000, true]],
+    plans: [['30 Dinners', 'dinner', 30, 450000]],
   },
   {
     name: 'Seed Guwahati Pithas', city: 'Guwahati', lat: 26.1433, lng: 91.7898, radius: 7000, fee: 2000,
@@ -68,7 +72,7 @@ async function main() {
   const passwordHash = await hashPassword(SEED_PASSWORD);
 
   const counts = await withTransaction(async (db) => {
-    const c = { cities: 0, citiesExisting: 0, users: 0, restaurants: 0, feesSet: 0, menuItems: 0, addresses: 0 };
+    const c = { cities: 0, citiesExisting: 0, users: 0, restaurants: 0, feesSet: 0, menuItems: 0, plans: 0, addresses: 0 };
 
     const cityIds = {};
     for (const city of CITIES) {
@@ -129,6 +133,15 @@ async function main() {
           [rows[0].id, name, pricePaise, isVegetarian],
         );
         c.menuItems += m.rowCount;
+      }
+      for (const [name, mealSlot, mealsCount, pricePaise] of r.plans ?? []) {
+        const p = await db.query(
+          `INSERT INTO subscription_plans (restaurant_id, name, meal_slot, meals_count, price_paise)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (restaurant_id, name) DO NOTHING`,
+          [rows[0].id, name, mealSlot, mealsCount, pricePaise],
+        );
+        c.plans += p.rowCount;
       }
     }
 

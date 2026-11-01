@@ -2,6 +2,9 @@ const config = require('./config');
 const logger = require('./logger');
 const { pool } = require('./db');
 const { createApp } = require('./app');
+const { startScheduler } = require('./jobs/scheduler');
+
+let scheduler = null;
 
 const app = createApp();
 const server = app.listen(config.PORT, (err) => {
@@ -11,6 +14,7 @@ const server = app.listen(config.PORT, (err) => {
     process.exit(1);
   }
   logger.info(`listening on port ${config.PORT}`);
+  if (config.JOBS_ENABLED) scheduler = startScheduler();
 });
 
 let shuttingDown = false;
@@ -19,6 +23,10 @@ function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   logger.info({ signal }, 'shutting down');
+
+  // No new job ticks; a tick already running holds a pool client, so pool.end() below
+  // waits for it to finish.
+  scheduler?.stop();
 
   // Stop accepting connections; the callback runs once in-flight requests finish.
   server.close(async () => {

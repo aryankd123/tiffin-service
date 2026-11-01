@@ -11,6 +11,8 @@ const addressRoutes = require('./routes/addresses');
 const restaurantRoutes = require('./routes/restaurants');
 const userRoutes = require('./routes/users');
 const orderRoutes = require('./routes/orders');
+const subscriptionRoutes = require('./routes/subscriptions');
+const deliveryRoutes = require('./routes/deliveries');
 
 // Builds the app without listening, so tests can import it and drive it with supertest.
 function createApp() {
@@ -33,6 +35,8 @@ function createApp() {
   app.use('/api/v1/restaurants', restaurantRoutes);
   app.use('/api/v1/users', userRoutes);
   app.use('/api/v1/orders', orderRoutes);
+  app.use('/api/v1/subscriptions', subscriptionRoutes);
+  app.use('/api/v1/deliveries', deliveryRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

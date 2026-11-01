@@ -2,6 +2,7 @@ const { pool, withTransaction } = require('../db');
 const { AppError } = require('../errors');
 const { assertPinNearCity } = require('./cityService');
 const { findOwned } = require('./addressService');
+const { buildSet } = require('../sql');
 
 // The discovery prefilter distance. Must equal the upper bound of
 // restaurants_delivery_radius_m_check; a manual test (S10) compares the two.
@@ -107,18 +108,6 @@ const MENU_UPDATABLE = {
   isVegetarian: 'is_vegetarian',
   isAvailable: 'is_available',
 };
-
-// Builds "col = $n, ..." from a whitelist. Values start after the fixed parameters.
-function buildSet(patch, whitelist, values) {
-  const sets = [];
-  for (const [field, column] of Object.entries(whitelist)) {
-    if (patch[field] !== undefined) {
-      values.push(patch[field]);
-      sets.push(`${column} = $${values.length}`);
-    }
-  }
-  return sets.join(', ');
-}
 
 async function updateRestaurant(user, restaurantId, patch) {
   return withTransaction(async (client) => {

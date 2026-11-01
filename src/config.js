@@ -14,6 +14,9 @@ const schema = z.object({
   // OAuth client ID from Google Cloud Console. Optional: without it, Google login is disabled.
   // Not a secret (it's also embedded in the frontend); the client *secret* is never needed here.
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  // Scheduled jobs (nightly subscription deliveries, auto-cancel) run inside the server unless
+  // switched off, e.g. for a second instance or while debugging.
+  JOBS_ENABLED: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
 });
 
 const parsed = schema.safeParse(process.env);

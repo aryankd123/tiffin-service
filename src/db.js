@@ -1,6 +1,11 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const config = require('./config');
 const logger = require('./logger');
+
+// DATE columns come back as 'YYYY-MM-DD' strings. pg's default turns them into a JavaScript
+// Date at local midnight, which serialises in UTC and can show the previous day (IST is UTC+5:30).
+const DATE_OID = 1082;
+types.setTypeParser(DATE_OID, (value) => value);
 
 const pool = new Pool({ connectionString: config.DATABASE_URL, max: 10 });
 
