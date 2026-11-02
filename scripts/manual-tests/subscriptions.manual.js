@@ -1,11 +1,13 @@
 // Subscription tests: plans, subscribing, viewing, cancelling.
 // Needs the server on :3000 (started with JOBS_ENABLED=false so scheduled jobs stay out of the
-// way), migrations 001-008 applied and `npm run seed` done. Run from the server folder:
+// way, and the default PAYMENT_PROVIDER=fake), migrations 001-010 applied and `npm run seed` done.
+// A subscription is paid upfront, so the ones that must be active are paid here.
+// Run from the server folder:
 //   node scripts/manual-tests/subscriptions.manual.js
 require('../../src/config'); // loads .env (SEED_PASSWORD)
 const { pool } = require('../../src/db');
 const clock = require('../../src/clock');
-const { call, show, note, registerUser, login } = require('./_http');
+const { call, show, note, registerUser, login, paySubscription, subscribePaid } = require('./_http');
 
 const SEED_PASSWORD = process.env.SEED_PASSWORD;
 const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
@@ -52,8 +54,8 @@ async function sqlBlocked(id, label, sql, params) {
 
   console.log('\n=== U1-U5 subscribing');
   const u1 = await call('POST', '/subscriptions', { token: customer.token, body: { planId, addressId: home.id, weekdays: ['fri', 'mon', 'wed'] } });
-  show('U1', 'subscribe: 5 lunches, Home, Mon/Wed/Fri', u1);
-  const sub = u1.json.subscription;
+  show('U1', 'subscribe: 5 lunches, Home, Mon/Wed/Fri', u1, `→ ${u1.json.subscription?.status}, then paid (fake gateway)`);
+  const sub = (await paySubscription(customer.token, u1.json.subscription.id, u1.json.payment)).json.subscription;
   note(`startDate ${sub.startDate} (first open date: ${sub.startDate === firstOpen}) · weekdays ${sub.weekdays.join(',')} · progress ${JSON.stringify(sub.progress)}`);
   note(`next delivery dates ${sub.nextDeliveryDates.join(', ')} · all Mon/Wed/Fri: ${sub.nextDeliveryDates.every((d) => [1, 3, 5].includes(clock.isoWeekday(d)))} · projected last ${sub.projectedLastDate}`);
   note(`plan snapshot ${JSON.stringify(sub.plan)}`);
@@ -84,13 +86,14 @@ async function sqlBlocked(id, label, sql, params) {
 
   console.log('\n=== U9-U11 several subscriptions, cancelling');
   const dinners = (await pool.query("SELECT id FROM subscription_plans WHERE restaurant_id = $1 AND name = '20 Dinners'", [kora])).rows[0].id;
-  const u9 = await call('POST', '/subscriptions', { token: customer.token, body: { planId: dinners, addressId: home.id, weekdays: ['sat', 'sun'] } });
-  show('U9', 'a second subscription: 20 Dinners, same address', u9);
+  const u9 = await subscribePaid(customer.token, { planId: dinners, addressId: home.id, weekdays: ['sat', 'sun'] });
+  show('U9', 'a second subscription: 20 Dinners, same address', u9, '(paid)');
   const u10 = await call('POST', `/subscriptions/${u9.json.subscription.id}/cancel`, { token: customer.token, body: { reason: 'Moving out' } });
   show('U10a', 'customer cancels it, reason "Moving out"', u10, `→ ${JSON.stringify(u10.json.subscription?.cancelled)}`);
+  note(`refund: ${JSON.stringify(u10.json.subscription?.payment?.refund)}`);
   show('U10b', 'cancel it again', await call('POST', `/subscriptions/${u9.json.subscription.id}/cancel`, { token: customer.token }));
-  const again = await call('POST', '/subscriptions', { token: customer.token, body: { planId: dinners, addressId: home.id, weekdays: ['sat'] } });
-  show('U10c', 'subscribe again to the same plan + address', again);
+  const again = await subscribePaid(customer.token, { planId: dinners, addressId: home.id, weekdays: ['sat'] });
+  show('U10c', 'subscribe again to the same plan + address', again, '(paid)');
   const u11 = await call('POST', `/subscriptions/${again.json.subscription.id}/cancel`, { token: vendor.token });
   show('U11', 'the vendor cancels a customer subscription', u11, `→ by ${u11.json.subscription?.cancelled?.by}`);
 

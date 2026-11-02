@@ -1,7 +1,8 @@
 // Delivery and scheduler tests: the clock rules, skips and pauses, the nightly job,
 // marking deliveries, completion, auto-cancel and the scheduler's lock.
-// Needs the server on :3000 started with JOBS_ENABLED=false (the jobs are called directly here),
-// migrations 001-008 and `npm run seed`. Run from the server folder:
+// Needs the server on :3000 started with JOBS_ENABLED=false (the jobs are called directly here)
+// and the default PAYMENT_PROVIDER=fake, migrations 001-010 and `npm run seed`. Subscriptions are
+// paid upfront, so the ones used here are paid. Run from the server folder:
 //   node scripts/manual-tests/deliveries.manual.js
 // Where a test needs time to have passed (a subscription that started two weeks ago, an order
 // placed 20 minutes ago), that is simulated with a labelled SQL UPDATE.
@@ -11,7 +12,7 @@ const clock = require('../../src/clock');
 const { scheduleDeliveries } = require('../../src/jobs/subscriptionDeliveries');
 const { cancelUnconfirmedOrders } = require('../../src/jobs/autoCancelOrders');
 const { tick, JOB_LOCK_ID } = require('../../src/jobs/scheduler');
-const { call, show, note, registerUser, login, placePaidOrder } = require('./_http');
+const { call, show, note, registerUser, login, placePaidOrder, subscribePaid } = require('./_http');
 
 const SEED_PASSWORD = process.env.SEED_PASSWORD;
 const ok = (b) => (b ? 'yes' : 'NO');
@@ -67,9 +68,8 @@ const deliveryOf = async (subId, date) => (await pool.query(
   // K-subscription: Mon/Wed/Fri, starting on a Monday at least a week away (clear of the cutoff).
   let start = clock.addDays(firstOpen, 7);
   while (clock.isoWeekday(start) !== 1) start = clock.addDays(start, 1);
-  const kSub = (await call('POST', '/subscriptions', {
-    token: customer.token, body: { planId: plan.id, addressId: home.id, weekdays: ['mon', 'wed', 'fri'], startDate: start },
-  })).json.subscription;
+  const kSub = (await subscribePaid(customer.token,
+    { planId: plan.id, addressId: home.id, weekdays: ['mon', 'wed', 'fri'], startDate: start })).json.subscription;
   const d = (n) => clock.addDays(start, n); // start = Monday, d(2) = Wednesday, …
   note(`K-subscription ${kSub.id}: Mon/Wed/Fri from ${start} · projected last ${kSub.projectedLastDate} (= start+9: ${ok(kSub.projectedLastDate === d(9))})`);
 
@@ -111,7 +111,7 @@ const deliveryOf = async (subId, date) => (await pool.query(
   const plan2 = (await call('POST', `/restaurants/${kora}/plans`, {
     token: vendor.token, body: { name: `Test 5B-W Lunches ${Date.now()}`, mealSlot: 'lunch', mealsCount: 5, pricePaise: 60000 },
   })).json.plan;
-  const wSub = (await call('POST', '/subscriptions', { token: customer.token, body: { planId: plan2.id, addressId: home.id, weekdays: days } })).json.subscription;
+  const wSub = (await subscribePaid(customer.token, { planId: plan2.id, addressId: home.id, weekdays: days })).json.subscription;
   await pool.query('UPDATE subscriptions SET start_date = $2 WHERE id = $1', [wSub.id, clock.addDays(today, -13)]);
   note(`W-subscription ${wSub.id}: ${days.join(',')}, 5 meals; SQL: start_date moved to ${clock.addDays(today, -13)} (simulating two weeks)`);
   const past = [];
@@ -143,6 +143,7 @@ const deliveryOf = async (subId, date) => (await pool.query(
   await scheduleDeliveries(d(4));
   show('W10', 'cancel K-sub (it has a locked delivery)', w10,
     `→ locked ${start} delivery still ${(await deliveryOf(kSub.id, start)).status}; job for ${d(4)} created one: ${ok(!!(await deliveryOf(kSub.id, d(4))))} (expected NO)`);
+  note(`refund (1 meal locked, 4 unused): ${JSON.stringify(w10.json.subscription?.payment?.refund)}`);
 
   console.log('\n=== X1-X4 auto-cancel and the scheduler lock');
   const kora2 = { restaurantId: kora, addressId: home.id, items: [{ menuItemId: (await pool.query("SELECT id FROM menu_items WHERE restaurant_id = $1 AND name = 'Masala Dosa'", [kora])).rows[0].id, quantity: 1 }] };

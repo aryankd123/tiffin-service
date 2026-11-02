@@ -30,6 +30,10 @@ const schema = z.object({
   if (c.NODE_ENV === 'production' && c.PAYMENT_PROVIDER === 'fake') {
     ctx.addIssue({ code: 'custom', path: ['PAYMENT_PROVIDER'], message: 'the fake gateway is not allowed in production' });
   }
+  // Live keys move real money: never on a development machine.
+  if (c.NODE_ENV !== 'production' && c.RAZORPAY_KEY_ID?.startsWith('rzp_live_')) {
+    ctx.addIssue({ code: 'custom', path: ['RAZORPAY_KEY_ID'], message: 'live keys (rzp_live_) are only allowed in production' });
+  }
 });
 
 const parsed = schema.safeParse(process.env);

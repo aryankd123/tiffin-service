@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tiffin dev: Razorpay checkout</title>
+  <!-- Dev-only page. Opens Razorpay's real checkout in TEST mode for a gateway order
+       the API created, and shows what Razorpay hands back to the browser. It never calls the
+       Tiffin API and never sees the key secret: the key id and gateway order id are public. -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; background: #fafafa; color: #222; }
+    input { width: 100%; padding: 8px; font-family: monospace; box-sizing: border-box; margin-bottom: 8px; }
+    pre { background: #fff; border: 1px solid #ddd; padding: 12px; overflow-x: auto; }
+    button { padding: 8px 14px; margin: 8px 8px 8px 0; }
+    .warn { color: #a40; }
+  </style>
+</head>
+<body>
+  <h1>Tiffin dev: pay in Razorpay test mode</h1>
+  <p>Open the link printed by <code>razorpay-real.manual.js start</code>; it fills the fields below.
+     Test mode moves no real money. Pay with a test method from Razorpay's docs (for UPI: <code>success@razorpay</code>).</p>
+
+  <label>Key id (public; must start with <code>rzp_test_</code>)</label>
+  <input id="key">
+  <label>Gateway order id (created by the Tiffin API)</label>
+  <input id="order">
+  <label>Amount in paise (shown in the checkout; Razorpay charges what the order says)</label>
+  <input id="amount">
+  <button id="pay">Pay with Razorpay (test mode)</button>
+
+  <div id="result" hidden>
+    <h2>What Razorpay returned to the browser</h2>
+    <pre id="response"></pre>
+    <p>Download it, then run <code>razorpay-real.manual.js verify</code>.
+       To test a closed browser instead, don't download: run <code>razorpay-real.manual.js reconcile</code>.</p>
+    <button id="download">Download as razorpay_payment.json</button>
+  </div>
+  <p id="error" class="warn" hidden></p>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const q = new URLSearchParams(location.search);
+    $('key').value = q.get('key') ?? '';
+    $('order').value = q.get('order') ?? '';
+    $('amount').value = q.get('amount') ?? '';
+    let paid = null;
+
+    $('pay').onclick = () => {
+      const key = $('key').value.trim();
+      if (!key.startsWith('rzp_test_')) {
+        alert('Only test keys (rzp_test_…) on this page.');
+        return;
+      }
+      $('error').hidden = true;
+      const rzp = new Razorpay({
+        key,
+        order_id: $('order').value.trim(),
+        amount: Number($('amount').value),
+        currency: 'INR',
+        name: 'Tiffin v2 (test mode)',
+        description: 'Development checkout',
+        handler: (response) => {
+          // { razorpay_payment_id, razorpay_order_id, razorpay_signature }
+          paid = response;
+          $('response').textContent = JSON.stringify(response, null, 2);
+          $('result').hidden = false;
+        },
+      });
+      rzp.on('payment.failed', (r) => {
+        $('error').textContent = `Payment failed: ${r.error.description} (${r.error.reason})`;
+        $('error').hidden = false;
+      });
+      rzp.open();
+    };
+
+    $('download').onclick = () => {
+      const blob = new Blob([JSON.stringify(paid, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'razorpay_payment.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+  </script>
+</body>
+</html>

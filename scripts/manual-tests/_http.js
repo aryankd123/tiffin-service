@@ -56,12 +56,15 @@ async function placeOrder(token, body, key = crypto.randomUUID()) {
   return { status: res.status, json, replayed: res.headers.get('idempotent-replayed') };
 }
 
-// Pays for an order through the fake gateway, like a browser finishing Razorpay's checkout
-//. Needs PAYMENT_PROVIDER=fake on the server.
-async function payOrder(token, orderId, payment) {
+// Pays through the fake gateway, like a browser finishing Razorpay's checkout, then
+// reports the result to the API. Needs PAYMENT_PROVIDER=fake on the server.
+async function pay(token, path, payment) {
   const paid = await call('POST', '/dev/fake-gateway/pay', { token, body: { gatewayOrderId: payment.gatewayOrderId } });
-  return call('POST', `/orders/${orderId}/payment/verify`, { token, body: paid.json });
+  return call('POST', `${path}/payment/verify`, { token, body: paid.json });
 }
+
+const payOrder = (token, orderId, payment) => pay(token, `/orders/${orderId}`, payment);
+const paySubscription = (token, subscriptionId, payment) => pay(token, `/subscriptions/${subscriptionId}`, payment);
 
 async function placePaidOrder(token, body) {
   const placed = await placeOrder(token, body);
@@ -69,4 +72,13 @@ async function placePaidOrder(token, body) {
   return placed;
 }
 
-module.exports = { call, show, note, registerUser, login, placeOrder, payOrder, placePaidOrder };
+// Subscribes and pays upfront. Returns the verify response: { payment, subscription }.
+async function subscribePaid(token, body) {
+  const created = await call('POST', '/subscriptions', { token, body });
+  if (created.status !== 201) return created;
+  return paySubscription(token, created.json.subscription.id, created.json.payment);
+}
+
+module.exports = {
+  BASE, call, show, note, registerUser, login, placeOrder, payOrder, placePaidOrder, paySubscription, subscribePaid,
+};
