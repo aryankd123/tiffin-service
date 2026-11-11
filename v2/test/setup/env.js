@@ -24,3 +24,5 @@ process.env.NODE_ENV = 'test';          // silences the logger
 process.env.JOBS_ENABLED = 'false';     // tests call jobs directly
 process.env.PAYMENT_PROVIDER = 'fake';  // offline gateway
 process.env.BCRYPT_COST = '4';          // fast hashes; cost 12 is measured separately
+// A made-up Google client id: tests sign their own "Google" tokens for it, never real ones.
+process.env.GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com';

@@ -31,4 +31,34 @@ async function registerUser(prefix = 'user') {
 
 const errorCode = (res) => res.body?.error?.code;
 
-module.exports = { app, call, login, registerUser, errorCode };
+// Orders need an Idempotency-Key; a fresh one per call unless a test passes its own.
+const placeOrder = (token, body, key = crypto.randomUUID()) =>
+  call('POST', '/orders', { token, body, headers: { 'Idempotency-Key': key } });
+
+// The fake gateway lives in this process (the same module the app uses), so a test can play
+// the customer paying in the checkout window, then report the result like the browser would.
+function pay(token, path, payment, status = 'captured') {
+  const { gateway } = require('../../src/payments/gateway');
+  const paid = gateway.simulatePayment(payment.gatewayOrderId, { status });
+  return call('POST', `${path}/payment/verify`, { token, body: paid });
+}
+
+async function placePaidOrder(token, body) {
+  const placed = await placeOrder(token, body);
+  if (placed.status !== 201) throw new Error(`order failed: ${placed.status} ${JSON.stringify(placed.body)}`);
+  const verified = await pay(token, `/orders/${placed.body.order.id}`, placed.body.payment);
+  if (verified.status !== 200) throw new Error(`payment failed: ${verified.status} ${JSON.stringify(verified.body)}`);
+  return verified.body.order;
+}
+
+async function subscribePaid(token, body) {
+  const created = await call('POST', '/subscriptions', { token, body });
+  if (created.status !== 201) throw new Error(`subscribe failed: ${created.status} ${JSON.stringify(created.body)}`);
+  const verified = await pay(token, `/subscriptions/${created.body.subscription.id}`, created.body.payment);
+  if (verified.status !== 200) throw new Error(`payment failed: ${verified.status} ${JSON.stringify(verified.body)}`);
+  return verified.body.subscription;
+}
+
+module.exports = {
+  app, call, login, registerUser, errorCode, placeOrder, pay, placePaidOrder, subscribePaid,
+};
