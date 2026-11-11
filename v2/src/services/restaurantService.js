@@ -5,7 +5,7 @@ const { findOwned } = require('./addressService');
 const { buildSet } = require('../sql');
 
 // The discovery prefilter distance. Must equal the upper bound of
-// restaurants_delivery_radius_m_check; a manual test (S10) compares the two.
+// restaurants_delivery_radius_m_check; test/api/restaurants.test.js (S9) checks that they match.
 const MAX_DELIVERY_RADIUS_M = 15000;
 
 const RESTAURANT_COLUMNS = `r.id, r.name, r.city_id, c.name AS city_name,

@@ -130,11 +130,22 @@ Run a scheduled job by hand: `npm run job -- deliveries [--date YYYY-MM-DD]`, `a
 ## Tests
 
 ```bash
-npm run test:unit             # pure functions: clock, refunds, signatures, validation
-npm test                      # all tests
+npm run test:unit             # pure functions: clock, refunds, signatures, validation (no database)
+npm run test:api              # HTTP requests through the whole app against a real test database
+npm test                      # both
 ```
 
-Tests only ever run against a database whose name ends in `_test` (by default `tiffin_test` on the same server); anything else is refused before a connection is made. `scripts/manual-tests/` holds end-to-end scripts that exercise the running API, including concurrency races, tampered tokens and signatures, and direct-SQL attempts to break database constraints.
+The API tests need a separate database, created once by a superuser (PostGIS can only be installed by one):
+
+```sql
+CREATE DATABASE tiffin_test OWNER tiffin;
+\c tiffin_test
+CREATE EXTENSION postgis;
+```
+
+Tests only ever run against a database whose name ends in `_test` (by default `tiffin_test` on the same server as `DATABASE_URL`, or `TEST_DATABASE_URL`); anything else is refused before a connection is made. Before the run the test database is migrated to the latest schema; each test file then empties it and loads a small fixed set of cities, users, kitchens and addresses, so tests never depend on leftover data. The API tests cover authentication and token theft, ownership checks, validation, concurrency races on two real connections, spatial discovery including query plans, and constraints the database enforces on its own.
+
+`scripts/manual-tests/` holds the original end-to-end scripts that exercise a running server.
 
 ## Project structure
 
@@ -154,7 +165,8 @@ dev/                      local pages for Google sign-in and Razorpay test check
 
 ## Roadmap
 
-- API tests against a real test database, run in CI (GitHub Actions with PostGIS)
+- API tests for orders, subscriptions, payments and webhooks
+- Continuous integration: GitHub Actions running all tests against PostGIS on every push
 - Docker image and `docker compose` for the API and database
 - Rate limiting and a discovery cache (Redis)
 - Deployment with backups and a tested restore
