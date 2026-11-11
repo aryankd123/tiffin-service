@@ -3,3 +3,6 @@ node_modules
 
 # Personal editor settings
 .vscode/
+
+# Test coverage report (npm run test:coverage)
+coverage/

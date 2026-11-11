@@ -132,7 +132,8 @@ Run a scheduled job by hand: `npm run job -- deliveries [--date YYYY-MM-DD]`, `a
 ```bash
 npm run test:unit             # pure functions: clock, refunds, signatures, validation (no database)
 npm run test:api              # HTTP requests through the whole app against a real test database
-npm test                      # both
+npm test                      # both: 248 tests, about 40 seconds
+npm run test:coverage         # with a coverage report (about 94% of lines in src/)
 ```
 
 The API tests need a separate database, created once by a superuser (PostGIS can only be installed by one):
@@ -143,7 +144,20 @@ CREATE DATABASE tiffin_test OWNER tiffin;
 CREATE EXTENSION postgis;
 ```
 
-Tests only ever run against a database whose name ends in `_test` (by default `tiffin_test` on the same server as `DATABASE_URL`, or `TEST_DATABASE_URL`); anything else is refused before a connection is made. Before the run the test database is migrated to the latest schema; each test file then empties it and loads a small fixed set of cities, users, kitchens and addresses, so tests never depend on leftover data. The API tests cover authentication and token theft, ownership checks, validation, concurrency races on two real connections, spatial discovery including query plans, and constraints the database enforces on its own.
+Tests only ever run against a database whose name ends in `_test` (by default `tiffin_test` on the same server as `DATABASE_URL`, or `TEST_DATABASE_URL`); anything else is refused before a connection is made. Before the run the test database is migrated to the latest schema; each test file then empties it and loads a small fixed set of cities, users, kitchens and addresses, so tests never depend on leftover data.
+
+| Area | What the tests prove |
+|---|---|
+| Auth | forged, expired and wrong-audience tokens rejected; refresh-token reuse revokes only the stolen session's family; roles and stale tokens |
+| Google sign-in | the real `google-auth-library` checks run against a test-generated signing key: forged keys, algorithm confusion, wrong audience, expiry; account linking only on a verified email; concurrent first sign-ins create one account |
+| Addresses, discovery | India and 50 km rules, 404 for other users' data, one default address under parallel requests, radius boundaries to the metre, spatial index usage |
+| Orders | prices from the database, idempotency under 5 parallel requests, serviceability, snapshots, the total CHECK |
+| Lifecycle | transitions per role, cancellation rules, 10 cancel-vs-confirm races with one winner each, the transition trigger, keyset pagination |
+| Subscriptions | plans, start dates and the 9 PM cutoff, skips and pauses, the nightly job (idempotent), missed meals, completion |
+| Payments | signature verification, the status-check job, expiry, late payments, refunds for every cancellation, refund retries and crash safety, auto-cancel |
+| Webhooks | wrong or missing signatures, tampered bodies, events the gateway can't confirm, duplicates, no personal data stored |
+
+Each group was also checked by breaking the code it protects (removing an ownership check, the compare-and-set, the gateway cross-check…) and confirming the tests fail.
 
 `scripts/manual-tests/` holds the original end-to-end scripts that exercise a running server.
 

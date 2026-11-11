@@ -7,6 +7,7 @@
 const shared = {
   testEnvironment: 'node',
   setupFiles: ['<rootDir>/test/setup/env.js'],
+  collectCoverageFrom: ['<rootDir>/src/**/*.js'], // npm run test:coverage
 };
 
 module.exports = {

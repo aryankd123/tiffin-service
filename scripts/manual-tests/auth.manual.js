@@ -91,14 +91,14 @@ const median = (a) => a.sort((x, y) => x - y)[Math.floor(a.length / 2)];
   console.log('\n=== B6 roles: 403 vs 401, stale role in token');
   const C = await call('POST', '/auth/login', { body: { email, password: PW } });
   show('POST /cities no token', await call('POST', '/cities', { body: { name: 'X', state: 'Y' } }));
-  show('POST /cities as customer', await call('POST', '/cities', { token: C.json.accessToken, body: { name: `Testcity ${ts}`, state: 'Test' } }));
+  show('POST /cities as customer', await call('POST', '/cities', { token: C.json.accessToken, body: { name: `Testcity ${ts}`, state: 'Test', centre: { lat: 12.2958, lng: 76.6394 } } }));
   await pool.query("UPDATE users SET role = 'admin' WHERE id = $1", [reg.json.user.id]);
   console.log('  -- promoted test user to admin in DB --');
-  show('POST /cities with OLD token (role customer)', await call('POST', '/cities', { token: C.json.accessToken, body: { name: `Testcity ${ts}`, state: 'Test' } }));
+  show('POST /cities with OLD token (role customer)', await call('POST', '/cities', { token: C.json.accessToken, body: { name: `Testcity ${ts}`, state: 'Test', centre: { lat: 12.2958, lng: 76.6394 } } }));
   const A = await call('POST', '/auth/refresh', { body: { refreshToken: C.json.refreshToken } });
   show('refresh → new token', A, `role in token: ${JSON.parse(Buffer.from(A.json.accessToken.split('.')[1], 'base64url')).role}`);
-  show('POST /cities with new admin token', await call('POST', '/cities', { token: A.json.accessToken, body: { name: `Testcity ${ts}`, state: 'Test' } }));
-  show('POST /cities same city again', await call('POST', '/cities', { token: A.json.accessToken, body: { name: `Testcity ${ts}`, state: 'Test' } }));
+  show('POST /cities with new admin token', await call('POST', '/cities', { token: A.json.accessToken, body: { name: `Testcity ${ts}`, state: 'Test', centre: { lat: 12.2958, lng: 76.6394 } } }));
+  show('POST /cities same city again', await call('POST', '/cities', { token: A.json.accessToken, body: { name: `Testcity ${ts}`, state: 'Test', centre: { lat: 12.2958, lng: 76.6394 } } }));
 
   console.log(`\nTest data created: user ${reg.json.user.id} (${email}), city "Testcity ${ts}"`);
   await pool.end();
