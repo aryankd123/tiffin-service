@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { Client } = require('pg');
@@ -6,13 +6,11 @@ const { Client } = require('pg');
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'migrations');
 const LOCK_ID = 727274;
 
-async function main() {
-  if (!process.env.DATABASE_URL) {
-    console.error('DATABASE_URL is not set (check your .env file)');
-    process.exit(1);
-  }
-
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+// Applies every migrations/*.sql file not yet recorded in schema_migrations, in filename order,
+// each in its own transaction. An advisory lock makes two concurrent runs take turns.
+// Returns the number of files applied; throws if one fails (that file is rolled back).
+async function migrate(connectionString, log = console.log) {
+  const client = new Client({ connectionString });
   await client.connect();
 
   try {
@@ -42,23 +40,33 @@ async function main() {
         await client.query(sql);
         await client.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [file]);
         await client.query('COMMIT');
-        console.log(`applied ${file}`);
+        log(`applied ${file}`);
         count++;
       } catch (err) {
         await client.query('ROLLBACK');
-        console.error(`FAILED ${file}: ${err.message}`);
-        process.exitCode = 1;
-        return;
+        throw new Error(`FAILED ${file}: ${err.message}`);
       }
     }
-
-    console.log(count === 0 ? 'nothing to apply' : `done, ${count} applied`);
+    return count;
   } finally {
     await client.end();
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+async function main() {
+  if (!process.env.DATABASE_URL) {
+    console.error('DATABASE_URL is not set (check your .env file)');
+    process.exit(1);
+  }
+  try {
+    const count = await migrate(process.env.DATABASE_URL);
+    console.log(count === 0 ? 'nothing to apply' : `done, ${count} applied`);
+  } catch (err) {
+    console.error(err.message);
+    process.exitCode = 1;
+  }
+}
+
+if (require.main === module) main();
+
+module.exports = { migrate };

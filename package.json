@@ -4,13 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --runInBand",
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
     "job": "node scripts/run-job.js",
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "test:unit": "jest --selectProjects unit"
+    "test:unit": "jest --selectProjects unit",
+    "test:api": "jest --runInBand --selectProjects api"
   },
   "keywords": [],
   "author": "",
